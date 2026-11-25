@@ -49,21 +49,26 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: 'bad_request' });
   }
 
-  const model = process.env.GEMINI_MODEL || 'gemini-flash-latest';
+  // Try the preferred model first; on overload/quota/unknown-model fall through to the next one.
+  const models = [...new Set([process.env.GEMINI_MODEL, 'gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite'].filter(Boolean))];
   try {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.3 },
-      }),
-    });
-    if (r.status === 429) return res.status(429).json({ error: 'rate_limited' });
-    if (!r.ok) {
-      console.error('gemini error', r.status, (await r.text()).slice(0, 500));
-      return res.status(502).json({ error: 'upstream' });
+    let r = null, lastStatus = 0;
+    for (const model of models) {
+      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts }],
+          generationConfig: { responseMimeType: 'application/json', temperature: 0.3 },
+        }),
+      });
+      if (r.ok) break;
+      lastStatus = r.status;
+      console.error('gemini error', model, r.status, (await r.text()).slice(0, 300));
+      if (![404, 429, 500, 503].includes(r.status)) break;
+      r = null;
     }
+    if (!r || !r.ok) return res.status(lastStatus === 429 ? 429 : 502).json({ error: lastStatus === 429 ? 'rate_limited' : 'upstream' });
     const j = await r.json();
     const text = (j.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
     const out = parseLoose(text);
