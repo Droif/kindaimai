@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="คู่มืออาหารสำหรับคนเป็นกรดไหลย้อน ดูว่าอะไรกินได้ อะไรควรเลี่ยง และถ่ายรูปอาหารให้ AI ช่วยดู">
+<meta name="theme-color" content="#1d5a52">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%231d5a52'/%3E%3Cpath d='M12 5v6M9 8l3 3 3-3M7 14c0 3 2 5 5 5s5-2 5-5' stroke='white' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>กินได้ไหม</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap">
+<style>
+/* Layout: one mobile-first column — scan card, search, filters, food grid, habits; detail opens as a bottom sheet */
+:root{
+  --bg:#f2f5f3; --surface:#ffffff; --surface-2:#e7eeea; --fg:#17302b; --muted:#5b706a; --line:#d5e0db;
+  --accent:#1d5a52; --accent-fg:#ffffff; --accent-soft:#d6e9e4;
+  --ok:#22804f; --ok-bg:#dff2e6; --limit:#a86a06; --limit-bg:#fbefd6; --avoid:#c0392b; --avoid-bg:#fbe1dd;
+  --font-display:"Anuphan","IBM Plex Sans Thai",system-ui,sans-serif;
+  --font-body:"IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif;
+  --radius:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1917; --surface:#16231f; --surface-2:#1d2d29; --fg:#e4efeb; --muted:#97aca5; --line:#2a3c37;
+  --accent:#6cc2b3; --accent-fg:#0b1a17; --accent-soft:#1f3a35;
+  --ok:#5cd08f; --ok-bg:#173326; --limit:#f0b44c; --limit-bg:#382a10; --avoid:#ff8576; --avoid-bg:#3d1c18;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1917; --surface:#16231f; --surface-2:#1d2d29; --fg:#e4efeb; --muted:#97aca5; --line:#2a3c37;
+  --accent:#6cc2b3; --accent-fg:#0b1a17; --accent-soft:#1f3a35;
+  --ok:#5cd08f; --ok-bg:#173326; --limit:#f0b44c; --limit-bg:#382a10; --avoid:#ff8576; --avoid-bg:#3d1c18;
+  color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0;line-height:1.25}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,label:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+
+header.top{padding-top:20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:38px;height:38px;border-radius:11px;background:var(--accent);display:grid;place-items:center;flex:none}
+.brand h1{font-size:1.45rem}
+.brand p{margin:0;font-size:.82rem;color:var(--muted)}
+
+/* scan card */
+.scan{background:var(--accent);color:var(--accent-fg);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.scan h2{font-size:1.3rem}
+.scan p{margin:0;opacity:.88;font-size:.92rem}
+.scan-actions{display:flex;flex-wrap:wrap;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:12px;padding:11px 16px;font-weight:600;font-size:.95rem}
+.btn-light{background:var(--accent-fg);color:var(--accent)}
+.btn-ghost{background:transparent;color:var(--accent-fg);border:1.5px solid color-mix(in srgb,var(--accent-fg) 55%,transparent)}
+.btn svg{width:20px;height:20px;flex:none}
+input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.scan-note{font-size:.8rem;opacity:.8}
+
+/* result */
+.result{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.result-head{display:flex;gap:14px;align-items:flex-start}
+.result-head img{width:92px;height:92px;object-fit:cover;border-radius:12px;flex:none;background:var(--surface-2)}
+.result-head .meta{min-width:0;display:flex;flex-direction:column;gap:6px}
+.result-head h3{font-size:1.25rem}
+.result .summary{margin:0}
+.thinking{display:flex;align-items:center;gap:10px;color:var(--muted)}
+.spinner{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sub{font-size:.78rem;letter-spacing:.04em;color:var(--muted);font-weight:600;margin:0 0 6px}
+.ing{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ing li{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:10px;background:var(--surface-2)}
+.ing li .dot{width:10px;height:10px;border-radius:50%;flex:none;margin-top:8px}
+.ing li div{min-width:0}
+.ing li b{font-weight:600}
+.ing li span{display:block;font-size:.85rem;color:var(--muted)}
+.tips{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.result-actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn-soft{background:var(--accent-soft);color:var(--fg)}
+.err{color:var(--avoid);margin:0}
+
+/* status pill + gauge */
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px;font-size:.8rem;font-weight:600;white-space:nowrap;width:max-content}
+.pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.limit{background:var(--limit-bg);color:var(--limit)} .pill.avoid{background:var(--avoid-bg);color:var(--avoid)}
+.dot.ok{background:var(--ok)} .dot.limit{background:var(--limit)} .dot.avoid{background:var(--avoid)}
+.gauge{display:flex;gap:3px}
+.gauge i{width:22px;height:6px;border-radius:3px;background:var(--line)}
+.gauge.ok i:nth-child(1){background:var(--ok)}
+.gauge.limit i:nth-child(2){background:var(--limit)}
+.gauge.avoid i:nth-child(3){background:var(--avoid)}
+
+/* search + filters */
+.search{position:relative}
+.search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:20px;height:20px;color:var(--muted)}
+.search input{width:100%;font:inherit;font-size:1rem;padding:13px 14px 13px 44px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg)}
+.search input::placeholder{color:var(--muted)}
+.ask-ai{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px;border-radius:14px;background:var(--surface);border:1px dashed var(--line)}
+.ask-ai p{margin:0;flex:1 1 220px;min-width:0}
+.filters{display:flex;flex-direction:column;gap:10px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.chip{flex:none;border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;font-size:.9rem;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chip .dot{width:9px;height:9px;border-radius:50%}
+.legend{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.legend div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;font-size:.82rem;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.legend b{font-size:1.3rem;font-family:var(--font-display);font-variant-numeric:tabular-nums}
+.legend .ok b{color:var(--ok)} .legend .limit b{color:var(--limit)} .legend .avoid b{color:var(--avoid)}
+
+/* grid */
+.section-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.section-head h2{font-size:1.15rem}
+.section-head span{color:var(--muted);font-size:.85rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.card{text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:8px;transition:transform .12s,border-color .12s}
+.card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.card .emo{font-size:1.7rem;line-height:1}
+.card .nm{font-weight:600;line-height:1.35;min-width:0;overflow-wrap:anywhere}
+.card .mine{font-size:.75rem;color:var(--avoid);font-weight:600}
+.empty{padding:28px 16px;text-align:center;color:var(--muted);background:var(--surface);border-radius:var(--radius);border:1px dashed var(--line)}
+
+/* habits */
+.habits{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.habit{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px;display:flex;gap:12px}
+.habit .n{font-family:var(--font-display);font-weight:700;color:var(--accent);font-size:1.15rem;line-height:1.3;min-width:2.6em;font-variant-numeric:tabular-nums}
+.habit p{margin:0;font-size:.9rem;min-width:0}
+.habit b{display:block}
+.disclaimer{font-size:.8rem;color:var(--muted);margin:0}
+
+/* sheet */
+dialog{border:0;padding:0;background:transparent;max-width:none;max-height:none;width:100%;height:100%;margin:0}
+dialog::backdrop{background:rgba(5,15,12,.45)}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-width:560px;margin:0 auto;background:var(--surface);color:var(--fg);border-radius:22px 22px 0 0;
+  padding:22px max(20px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px;max-height:88%;overflow:auto;animation:up .2s ease-out}
+@keyframes up{from{transform:translateY(30px);opacity:.6}}
+.sheet .emo{font-size:2.6rem;line-height:1}
+.sheet h3{font-size:1.4rem}
+.sheet .row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.sheet p{margin:0}
+.sheet .tipbox{background:var(--surface-2);border-radius:12px;padding:12px}
+.close{position:absolute;top:12px;right:max(12px,env(safe-area-inset-right,0px));border:0;background:var(--surface-2);width:34px;height:34px;border-radius:50%;font-size:1.1rem}
+.toggle{display:flex;align-items:center;gap:10px;font-size:.92rem;cursor:pointer}
+.toggle input{width:20px;height:20px;accent-color:var(--avoid)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:420px){.legend b{font-size:1.1rem}.result-head img{width:72px;height:72px}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-fg)" stroke-width="2" stroke-linecap="round"><path d="M12 3v7"/><path d="M8 7l4 4 4-4"/><path d="M5 14c0 4 3 7 7 7s7-3 7-7"/></svg>
+      </div>
+      <div>
+        <h1>กินได้ไหม</h1>
+        <p>คู่มืออาหารสำหรับคนเป็นกรดไหลย้อน</p>
+      </div>
+    </div>
+  </header>
+
+  <section class="scan" aria-labelledby="scanTitle">
+    <div>
+      <h2 id="scanTitle">ถ่ายรูปอาหาร ให้ AI ช่วยดู</h2>
+      <p>ถ่ายจานตรงหน้า แล้วรู้ทันทีว่ามีวัตถุดิบไหนกระตุ้นกรดไหลย้อน พร้อมวิธีสั่งให้ปลอดภัยขึ้น</p>
+    </div>
+    <div class="scan-actions">
+      <label class="btn btn-light" for="camInput">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        ถ่ายรูป
+      </label>
+      <input id="camInput" type="file" accept="image/*" capture="environment">
+      <label class="btn btn-ghost" for="galInput">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>
+        เลือกจากคลังภาพ
+      </label>
+      <input id="galInput" type="file" accept="image/*">
+    </div>
+    <div class="scan-note" id="scanNote">ใช้ Claude วิเคราะห์ภาพ ครั้งแรกจะขออนุญาตก่อน</div>
+  </section>
+
+  <section class="result" id="result" hidden aria-live="polite"></section>
+
+  <div class="search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder="ค้นหา เช่น กาแฟ, ส้มตำ, กล้วย" autocomplete="off" aria-label="ค้นหาอาหาร">
+  </div>
+  <div class="ask-ai" id="askAi" hidden>
+    <p id="askAiText"></p>
+    <button class="btn btn-soft" id="askAiBtn" type="button">ถาม AI</button>
+  </div>
+
+  <div class="filters">
+    <div class="chips" id="statusChips" role="group" aria-label="กรองตามระดับ"></div>
+    <div class="chips" id="catChips" role="group" aria-label="หมวดหมู่อาหาร"></div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <section aria-labelledby="listTitle" style="display:flex;flex-direction:column;gap:12px">
+    <div class="section-head"><h2 id="listTitle">อาหารทั้งหมด</h2><span id="count"></span></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section aria-labelledby="habitTitle" style="display:flex;flex-direction:column;gap:12px">
+    <div class="section-head"><h2 id="habitTitle">นิสัยที่ช่วยลดอาการ</h2></div>
+    <div class="habits">
+      <div class="habit"><div class="n">3 ชม.</div><p><b>เว้นก่อนนอน</b>กินมื้อสุดท้ายอย่างน้อย 3 ชั่วโมงก่อนเอนตัวหรือนอน</p></div>
+      <div class="habit"><div class="n">6–8″</div><p><b>ยกหัวเตียงให้สูงขึ้น</b>ยกขาเตียงฝั่งหัวราว 6–8 นิ้ว ได้ผลดีกว่าการหนุนหมอนซ้อน</p></div>
+      <div class="habit"><div class="n">½</div><p><b>มื้อเล็ก แต่บ่อยขึ้น</b>กินครั้งละน้อย ๆ กระเพาะไม่แน่นจนดันกรดขึ้นหลอดอาหาร</p></div>
+      <div class="habit"><div class="n">ซ้าย</div><p><b>นอนตะแคงซ้าย</b>ช่วยให้กระเพาะอยู่ต่ำกว่าหลอดอาหาร ลดกรดย้อนตอนกลางคืน</p></div>
+      <div class="habit"><div class="n">ช้า</div><p><b>เคี้ยวให้ละเอียด</b>กินช้า ๆ ลดลมที่กลืนเข้าไปและช่วยให้ย่อยง่าย</p></div>
+      <div class="habit"><div class="n">หลวม</div><p><b>ใส่เสื้อผ้าหลวมสบาย</b>เข็มขัดหรือกางเกงรัดเอวเพิ่มแรงกดที่ท้อง</p></div>
+    </div>
+    <p class="disclaimer">ข้อมูลนี้เป็นแนวทางทั่วไป แต่ละคนมีอาหารกระตุ้นไม่เหมือนกัน ลองสังเกตตัวเองแล้วกด “กินแล้วมีอาการ” เพื่อจดไว้ ถ้ามีอาการบ่อย กลืนลำบาก น้ำหนักลด หรืออาเจียนเป็นเลือด ควรพบแพทย์ ผลจาก AI อาจคลาดเคลื่อนได้</p>
+  </section>
+</div>
+
+<dialog id="sheet" aria-labelledby="sheetTitle">
+  <div class="sheet" id="sheetBody"></div>
+</dialog>
+
+<script>
+// ---------- data ----------
+// [ชื่อ, emoji, ระดับ g=กินได้ y=กินได้บ้าง r=ควรเลี่ยง, เหตุผล, คำแนะนำ]
+const CATS = [
+  {id:'fruit',name:'ผลไม้',emo:'🍎',items:[
+    ['กล้วย','🍌','g','เป็นด่างอ่อน ช่วยเคลือบผนังหลอดอาหารและกระเพาะ','กล้วยสุกพอดีดีที่สุด กินเป็นของว่างตอนแสบท้องได้'],
+    ['แตงโม','🍉','g','น้ำเยอะ กรดต่ำ ช่วยเจือจางกรด','กินแบบแช่เย็นพอดี ไม่ต้องจิ้มพริกเกลือ'],
+    ['แคนตาลูป / เมลอน','🍈','g','กรดต่ำ เนื้อนุ่ม ย่อยง่าย',''],
+    ['มะละกอสุก','🧡','g','มีเอนไซม์ปาเปนช่วยย่อยโปรตีน','เลี่ยงกินเป็นส้มตำ เพราะเผ็ดเปรี้ยว'],
+    ['แอปเปิลพันธุ์หวาน','🍎','g','พันธุ์หวานกรดต่ำ เส้นใยช่วยการย่อย','เลือกฟูจิหรือกาล่า เลี่ยงแอปเปิลเขียวเปรี้ยว'],
+    ['ลูกแพร์','🍐','g','กรดต่ำ ฉ่ำน้ำ',''],
+    ['มะพร้าวอ่อน','🥥','g','น้ำมะพร้าวมีแร่ธาตุและค่อนข้างเป็นด่าง','ต่างจากกะทิ ซึ่งไขมันสูงและควรเลี่ยง'],
+    ['ฝรั่ง','🍏','y','เส้นใยสูง บางคนกินมากแล้วท้องอืด','กินครั้งละไม่กี่ชิ้น ไม่จิ้มพริกเกลือ'],
+    ['มะม่วงสุก','🥭','y','หวานแต่มีกรดอยู่บ้าง บางคนแสบท้อง','กินพอประมาณ เลี่ยงมะม่วงดิบและมะม่วงน้ำปลาหวาน'],
+    ['องุ่น','🍇','y','มีกรดปานกลาง',''],
+    ['สตรอว์เบอร์รี','🍓','y','มีกรดปานกลาง บางคนแสบท้อง',''],
+    ['ส้มโอ','🍊','y','เปรี้ยวน้อยกว่าส้มทั่วไป แต่ยังมีกรด','เลือกพันธุ์หวาน กินไม่กี่กลีบ'],
+    ['อะโวคาโด','🥑','y','ไขมันดี แต่ไขมันทุกชนิดทำให้ย่อยช้า','กินครั้งละ ¼–½ ลูก'],
+    ['ส้ม','🍊','r','กรดซิตริกสูง ระคายหลอดอาหาร',''],
+    ['มะนาว','🍋','r','เปรี้ยวจัด กรดสูงมาก','ระวังเมนูที่บีบมะนาวเยอะ เช่น ยำ ต้มยำ'],
+    ['สับปะรด','🍍','r','กรดสูง ทำให้แสบร้อนกลางอก',''],
+    ['มะขามเปรี้ยว / ผลไม้ดอง','🫙','r','เปรี้ยวจัด กระตุ้นอาการ',''],
+    ['ทุเรียน','🌰','r','ไขมันและน้ำตาลสูง ย่อยช้า ทำให้หูรูดหย่อน',''],
+  ]},
+  {id:'veg',name:'ผัก',emo:'🥦',items:[
+    ['บรอกโคลี','🥦','g','เส้นใยสูง กรดต่ำ','ต้มหรือนึ่งดีกว่าผัดน้ำมันเยอะ'],
+    ['แครอท','🥕','g','ย่อยง่าย มีเส้นใยดี',''],
+    ['ฟักทอง','🎃','g','เนื้อนุ่ม กรดต่ำ อิ่มท้อง',''],
+    ['ฟัก / แฟง / บวบ','🥒','g','นุ่ม ย่อยง่ายมาก เหมาะทำต้มจืด',''],
+    ['แตงกวา','🥒','g','น้ำเยอะ เป็นด่างอ่อน',''],
+    ['ผักบุ้ง / ผักกาดขาว','🥬','g','ผักใบเขียวกรดต่ำ','ผัดน้ำมันน้อย ไม่ใส่พริก'],
+    ['ผักสลัด','🥗','g','กรดต่ำ','ระวังน้ำสลัดใสเปรี้ยวหรือครีมข้น'],
+    ['มันเทศ / มันหวาน','🍠','g','เส้นใยและแป้งดี ช่วยดูดซับกรด','ต้มหรืออบ ไม่ทอด'],
+    ['มันฝรั่งต้ม / อบ','🥔','g','ย่อยง่าย','เลี่ยงเฟรนช์ฟรายส์และมันฝรั่งทอด'],
+    ['ข้าวโพด','🌽','g','เส้นใยสูง กรดต่ำ',''],
+    ['เห็ด','🍄','g','ไขมันต่ำ',''],
+    ['ถั่วฝักยาว / ถั่วแขก','🫛','g','เส้นใยดี',''],
+    ['ขิง','🫚','g','ช่วยลดคลื่นไส้และการอักเสบ','ใช้ปริมาณน้อย ต้มน้ำขิงอ่อน ๆ'],
+    ['กะหล่ำปลี','🥬','y','สุกแล้วกินได้ ดิบอาจทำให้ท้องอืด','ลวกหรือต้มให้นุ่ม'],
+    ['ต้นหอม / ผักชี','🌿','y','ใช้แต่งกลิ่นได้ แต่บางคนไวต่อกลุ่มหอม',''],
+    ['มะเขือเทศ','🍅','r','กรดสูง รวมถึงซอสมะเขือเทศ',''],
+    ['หอมหัวใหญ่ดิบ','🧅','r','กระตุ้นกรดและทำให้หูรูดหลอดอาหารหย่อน','ถ้าผ่านความร้อนจนสุกนิ่ม บางคนรับได้'],
+    ['กระเทียมดิบ','🧄','r','กระตุ้นอาการแสบร้อนในหลายคน','กระเทียมสุกปริมาณน้อยบางคนรับได้'],
+    ['พริก','🌶️','r','สารแคปไซซินระคายหลอดอาหาร','สั่ง "ไม่เผ็ด" หรือ "ไม่ใส่พริก" ทุกครั้ง'],
+  ]},
+  {id:'meat',name:'เนื้อสัตว์ / โปรตีน',emo:'🍗',items:[
+    ['อกไก่ ต้ม / นึ่ง / ย่าง','🍗','g','โปรตีนสูง ไขมันต่ำ','ลอกหนังออกก่อนกิน'],
+    ['ปลานึ่ง / ปลาย่าง','🐟','g','ไขมันต่ำ ย่อยง่าย',''],
+    ['กุ้งต้ม / นึ่ง','🦐','g','ไขมันต่ำ','เลี่ยงกุ้งชุบแป้งทอด'],
+    ['ไข่ขาว','🥚','g','โปรตีนล้วน ไม่มีไขมัน',''],
+    ['เต้าหู้','🧊','g','โปรตีนพืช ไขมันต่ำ','ต้มหรือนึ่ง เลี่ยงเต้าหู้ทอด'],
+    ['ไก่ย่างไม่ติดหนัง','🍢','g','ย่างแล้วไขมันหยดออก','ไม่จิ้มแจ่วหรือน้ำจิ้มเผ็ด'],
+    ['ไข่ต้มทั้งฟอง','🥚','y','ไข่แดงมีไขมัน บางคนแสบท้อง','วันละ 1 ฟองมักไม่มีปัญหา'],
+    ['หมูเนื้อแดง / สันใน','🐖','y','ไขมันปานกลาง','เลือกส่วนไม่ติดมัน ต้มหรือนึ่ง'],
+    ['เนื้อวัว / สเต๊ก','🥩','y','ไขมันสูง ย่อยช้า','เลือกส่วนไม่ติดมัน กินชิ้นเล็ก'],
+    ['ปลาหมึก','🦑','y','ไขมันต่ำแต่เหนียว ย่อยยากในบางคน','ต้มหรือย่าง ไม่ทอด'],
+    ['ไข่ดาว / ไข่เจียว','🍳','r','อมน้ำมันมาก','เปลี่ยนเป็นไข่ต้มหรือไข่ตุ๋น'],
+    ['หมูสามชั้น','🥓','r','ไขมันสูงมาก ทำให้หูรูดหย่อน',''],
+    ['ไส้กรอก / เบคอน / แฮม','🌭','r','ไขมันและเกลือสูง ผ่านการแปรรูป',''],
+    ['หนังไก่ / หนังหมู','🍖','r','ไขมันล้วน',''],
+  ]},
+  {id:'carb',name:'ข้าว / แป้ง',emo:'🍚',items:[
+    ['ข้าวต้ม / โจ๊ก','🍚','g','นุ่ม ย่อยง่าย เหมาะช่วงมีอาการ','ไม่เติมพริกไทยหรือพริกเยอะ'],
+    ['ข้าวสวย','🍚','g','แป้งเชิงซ้อน ช่วยดูดซับกรด',''],
+    ['ข้าวกล้อง','🌾','g','เส้นใยสูง ช่วยการย่อย',''],
+    ['ข้าวโอ๊ต','🥣','g','ดูดซับกรด เป็นมื้อเช้าที่ดีมาก','ต้มกับน้ำหรือนมไขมันต่ำ ใส่กล้วยแทนน้ำตาล'],
+    ['ขนมปังโฮลวีต','🍞','g','เส้นใยสูง ไขมันต่ำ',''],
+    ['แครกเกอร์จืด','🍘','g','ช่วยซับกรดตอนแสบท้อง','เลือกแบบไม่มีครีม ไม่เค็มจัด'],
+    ['เส้นก๋วยเตี๋ยวน้ำใส','🍜','g','ไขมันต่ำ','ไม่เติมพริก น้ำส้ม หรือน้ำตาลเยอะ'],
+    ['ขนมปังขาว','🍞','y','ย่อยเร็ว แต่บางคนท้องอืด',''],
+    ['ข้าวเหนียว','🍙','y','ย่อยช้า อิ่มนาน','กินปริมาณพอดี ไม่กินก่อนนอน'],
+    ['บะหมี่กึ่งสำเร็จรูป','🍜','r','เส้นผ่านการทอด ไขมันและโซเดียมสูง',''],
+    ['พาสต้าซอสมะเขือเทศ','🍝','r','ซอสมะเขือเทศกรดสูง','เปลี่ยนเป็นพาสต้าน้ำมันมะกอกเล็กน้อยกับผัก'],
+    ['พาสต้าซอสครีม','🍝','r','ครีมและชีสไขมันสูง',''],
+    ['ครัวซองต์ / พาย','🥐','r','เนยเยอะมาก',''],
+    ['พิซซ่า','🍕','r','ซอสมะเขือเทศ ชีส และไขมันรวมกัน',''],
+  ]},
+  {id:'dairy',name:'นม / ทดแทนนม',emo:'🥛',items:[
+    ['นมไขมันต่ำ / พร่องมันเนย','🥛','g','ไขมันน้อย ไม่กระตุ้นกรดมาก','ดื่มครั้งละแก้วเล็ก ไม่ดื่มก่อนนอน'],
+    ['โยเกิร์ตไขมันต่ำรสธรรมชาติ','🥄','g','มีโพรไบโอติกช่วยลำไส้','เลี่ยงรสผลไม้เปรี้ยวหรือหวานจัด'],
+    ['นมอัลมอนด์','🥛','g','ค่อนข้างเป็นด่าง ไขมันต่ำ',''],
+    ['นมถั่วเหลืองไม่หวาน','🫘','g','ไขมันต่ำ',''],
+    ['นมสดเต็มมันเนย','🥛','y','ไขมันสูง อาจทำให้กรดเพิ่มหลังดื่ม','ดื่มแล้วสบายขึ้นแค่ชั่วคราว ไม่ควรใช้แทนยา'],
+    ['ชีส','🧀','y','ไขมันสูง','กินเล็กน้อย เลือกชีสไขมันต่ำ'],
+    ['ไอศกรีม','🍨','r','ไขมันและน้ำตาลสูง',''],
+    ['วิปครีม / ครีมเทียม','🍦','r','ไขมันสูง',''],
+  ]},
+  {id:'drink',name:'เครื่องดื่ม',emo:'🥤',items:[
+    ['น้ำเปล่า','💧','g','ช่วยเจือจางและชะกรดลงกระเพาะ','จิบระหว่างวัน ไม่ดื่มรวดเดียวทีละมาก ๆ'],
+    ['น้ำขิงอ่อน ๆ','🫖','g','ช่วยลดคลื่นไส้','หวานน้อย ไม่ต้มเข้มจนเผ็ด'],
+    ['ชาคาโมมายล์','🍵','g','ไม่มีคาเฟอีน ช่วยผ่อนคลาย',''],
+    ['น้ำมะพร้าว','🥥','g','มีโพแทสเซียม ค่อนข้างเป็นด่าง',''],
+    ['น้ำเต้าหู้หวานน้อย','🥛','g','ไขมันต่ำ',''],
+    ['ชาเขียว / ชาดำ','🍵','y','มีคาเฟอีน','ชงอ่อน ไม่ดื่มตอนท้องว่าง'],
+    ['กาแฟ','☕','r','คาเฟอีนกระตุ้นกรดและทำให้หูรูดหย่อน','ถ้าเลิกไม่ได้ ลองกาแฟดีแคฟแก้วเล็กหลังอาหาร'],
+    ['ชาเปปเปอร์มินต์','🌱','r','มินต์ทำให้หูรูดหลอดอาหารคลายตัว',''],
+    ['น้ำอัดลม','🥤','r','ก๊าซเพิ่มแรงดันในกระเพาะ ดันกรดขึ้น',''],
+    ['เครื่องดื่มชูกำลัง','⚡','r','คาเฟอีนและน้ำตาลสูง',''],
+    ['เบียร์ / ไวน์ / เหล้า','🍺','r','แอลกอฮอล์ทำให้หูรูดหย่อนและระคายเยื่อบุ',''],
+    ['น้ำส้ม / น้ำมะนาว','🧃','r','กรดสูง',''],
+    ['ชานมไข่มุก','🧋','r','ครีมเทียม น้ำตาล และคาเฟอีนจากชา',''],
+    ['โกโก้ / ช็อกโกแลตร้อน','🍫','r','ช็อกโกแลตทำให้หูรูดหย่อน',''],
+  ]},
+  {id:'thai',name:'อาหารไทยจานเดียว',emo:'🍲',items:[
+    ['ข้าวต้มปลา / ข้าวต้มไก่','🍲','g','น้ำใส ไขมันต่ำ ย่อยง่าย','ไม่เติมพริกน้ำส้ม'],
+    ['โจ๊กหมู','🥣','g','นุ่ม ย่อยง่าย','ไม่ใส่ไข่เยี่ยวม้าหรือปาท่องโก๋'],
+    ['ไข่ตุ๋น','🍮','g','นุ่ม ไม่ใช้น้ำมัน',''],
+    ['แกงจืดเต้าหู้หมูสับ','🍵','g','น้ำซุปใส ไขมันต่ำ',''],
+    ['ต้มจืดฟัก / ต้มจืดผักกาด','🥘','g','ผักนุ่ม น้ำใส',''],
+    ['ปลานึ่งซีอิ๊ว','🐟','g','ไม่ใช้น้ำมัน ไม่เผ็ด','ระวังสูตรปลานึ่งมะนาว เพราะเปรี้ยวเผ็ด'],
+    ['ผัดผักรวมน้ำมันน้อย','🥦','g','ผักหลากหลาย','สั่ง "น้ำมันน้อย ไม่ใส่พริก"'],
+    ['ก๋วยเตี๋ยวน้ำใส','🍜','g','ไขมันต่ำ','ไม่เติมเครื่องปรุงเผ็ดเปรี้ยว'],
+    ['ข้าวมันไก่','🍗','y','ข้าวหุงด้วยมันไก่ ไขมันสูง','ขอข้าวสวยแทนข้าวมัน และเลี่ยงน้ำจิ้มเผ็ด'],
+    ['ข้าวผัด','🍛','y','ใช้น้ำมันเยอะ','สั่งน้ำมันน้อย ไม่บีบมะนาว'],
+    ['ผัดไทย','🍝','y','น้ำมัน มะขามเปียก และน้ำตาลรวมกัน','ขอไม่ใส่พริกป่น ไม่บีบมะนาว'],
+    ['สุกี้น้ำ / ชาบูน้ำใส','🍲','y','น้ำซุปใสกินได้ แต่น้ำจิ้มเผ็ดเปรี้ยว','ใช้น้ำจิ้มน้อย ๆ หรือใช้ซีอิ๊ว'],
+    ['ต้มยำ','🍲','r','ทั้งเปรี้ยวและเผ็ด','เปลี่ยนเป็นต้มจืดหรือต้มข่าไม่ใส่กะทิ'],
+    ['ส้มตำ','🥗','r','พริก มะนาว และมะเขือเทศ',''],
+    ['ยำต่าง ๆ','🥗','r','เปรี้ยวและเผ็ดจัด',''],
+    ['แกงเขียวหวาน / แกงกะทิ','🍛','r','กะทิไขมันสูงและพริกแกง',''],
+    ['แกงส้ม / แกงป่า','🥘','r','เปรี้ยวและเผ็ด',''],
+    ['ผัดกะเพรา','🌿','r','พริก กระเทียม และน้ำมัน','ถ้าจำเป็นต้องสั่ง ขอไม่เผ็ด ไม่ใส่ไข่ดาว'],
+    ['ลาบ / น้ำตก','🥩','r','พริกป่นและมะนาว',''],
+    ['ข้าวขาหมู','🍖','r','หนังและมันหมูมาก',''],
+    ['หมูกระทะ','🔥','r','เนื้อติดมันและน้ำจิ้มเผ็ด กินเยอะช่วงดึก',''],
+  ]},
+  {id:'snack',name:'ของหวาน / ขนม',emo:'🍰',items:[
+    ['มันต้ม / เผือกต้ม','🍠','g','แป้งดี ไขมันต่ำ',''],
+    ['เต้าฮวยน้ำขิง','🥣','g','ไขมันต่ำ และมีขิง','หวานน้อย'],
+    ['วุ้น / เยลลี่','🟩','g','ไขมันต่ำ ย่อยง่าย','เลี่ยงรสเปรี้ยวจัด'],
+    ['น้ำผึ้ง','🍯','g','ใช้แทนน้ำตาลได้','ใช้ปริมาณน้อย'],
+    ['ถั่ว / อัลมอนด์','🥜','y','ไขมันดี แต่ไขมันรวมสูง','กินกำมือเล็ก ๆ ต่อวัน'],
+    ['ขนมไทยใส่กะทิ','🍡','r','กะทิไขมันสูง เช่น บัวลอย ลอดช่อง',''],
+    ['ช็อกโกแลต','🍫','r','ไขมัน คาเฟอีน และสารที่ทำให้หูรูดหย่อน',''],
+    ['เค้กครีม','🍰','r','เนยและครีมเยอะ',''],
+    ['โดนัท','🍩','r','ทอดและหวานจัด',''],
+    ['มันฝรั่งทอด / ขนมกรุบกรอบ','🥨','r','ทอด เค็ม และไขมันสูง',''],
+    ['ลูกอม / หมากฝรั่งรสมินต์','🍬','r','มินต์ทำให้หูรูดคลายตัว','หมากฝรั่งรสอื่นที่ไม่ใช่มินต์ช่วยเพิ่มน้ำลายได้'],
+  ]},
+  {id:'sauce',name:'เครื่องปรุง / ซอส',emo:'🧂',items:[
+    ['ซีอิ๊วขาว / เกลือ','🧂','g','ไม่เปรี้ยวไม่เผ็ด','ใช้พอประมาณ'],
+    ['สมุนไพรสด (โหระพา ใบกะเพรา)','🌿','g','เพิ่มกลิ่นแทนพริกได้','ยกเว้นใบมินต์'],
+    ['ขมิ้น','🟡','g','ช่วยลดการอักเสบ',''],
+    ['น้ำมันมะกอก','🫒','y','ไขมันดี แต่ยังเป็นไขมัน','ใช้ช้อนเล็ก'],
+    ['มัสตาร์ด','🟨','y','มีน้ำส้มสายชู เปรี้ยวเล็กน้อย',''],
+    ['พริกไทย','⚫','y','เผ็ดร้อน','ใช้น้อย'],
+    ['ซอสมะเขือเทศ','🍅','r','กรดสูง',''],
+    ['ซอสพริก / น้ำพริก','🌶️','r','เผ็ดและมักมีน้ำส้มสายชู',''],
+    ['น้ำส้มสายชู / น้ำส้มพริกดอง','🫙','r','กรดสูง',''],
+    ['มายองเนส','🥚','r','ไขมันสูง',''],
+    ['เนย','🧈','r','ไขมันอิ่มตัวสูง',''],
+    ['กะทิ','🥥','r','ไขมันสูงมาก ทำให้ย่อยช้า',''],
+  ]},
+  {id:'fried',name:'ของทอด / ฟาสต์ฟู้ด',emo:'🍟',items:[
+    ['ไก่ทอด','🍗','r','ทอดน้ำมันท่วม ไขมันสูง','เปลี่ยนเป็นไก่ย่างลอกหนัง'],
+    ['เฟรนช์ฟรายส์','🍟','r','ทอดและเค็ม','เปลี่ยนเป็นมันบดหรือมันอบ'],
+    ['เบอร์เกอร์','🍔','r','เนื้อติดมัน ชีส ซอส',''],
+    ['หมูกรอบ / หมูทอด','🥓','r','ไขมันสูงมาก',''],
+    ['ปาท่องโก๋','🥖','r','ทอดน้ำมันท่วม',''],
+    ['ทอดมัน / ของชุบแป้งทอด','🍤','r','อมน้ำมัน',''],
+  ]},
+];
+const LVL = {
+  g:{key:'ok',  label:'กินได้'},
+  y:{key:'limit',label:'กินได้บ้าง'},
+  r:{key:'avoid',label:'ควรเลี่ยง'},
+};
+const FOODS = [];
+CATS.forEach(c => c.items.forEach((it,i) => FOODS.push({id:c.id+'-'+i, cat:c.id, name:it[0], emo:it[1], lvl:it[2], why:it[3], tip:it[4]})));
+
+// ---------- per-viewer notes ("กินแล้วมีอาการ") ----------
+const MINE_KEY = 'gerd-mine-v1';
+let mine = new Set();
+try { mine = new Set(JSON.parse(localStorage.getItem(MINE_KEY) || '[]')); } catch(e) {}
+function saveMine(){ try { localStorage.setItem(MINE_KEY, JSON.stringify([...mine])); } catch(e) {} }
+
+// ---------- state ----------
+const state = {q:'', cat:'all', lvl:'all'};
+const $ = id => document.getElementById(id);
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+
+function pill(lvlKey, label){ const p = el('span','pill '+lvlKey); p.append(el('span','dot '+lvlKey)); p.lastChild.style.cssText='width:7px;height:7px;border-radius:50%'; p.append(label); return p; }
+function gauge(lvlKey){ const g = el('span','gauge '+lvlKey); g.setAttribute('aria-hidden','true'); g.append(el('i'),el('i'),el('i')); return g; }
+
+// ---------- filters ----------
+function renderChips(){
+  const sc = $('statusChips'); sc.textContent='';
+  const sOpts = [['all','ทุกระดับ',null],['g','กินได้','ok'],['y','กินได้บ้าง','limit'],['r','ควรเลี่ยง','avoid'],['mine','ที่ฉันมีอาการ',null]];
+  sOpts.forEach(([v,label,k]) => {
+    const b = el('button','chip'); b.type='button'; b.setAttribute('aria-pressed', state.lvl===v);
+    if (k) b.append(el('span','dot '+k)); b.append(label);
+    b.onclick = () => { state.lvl = v; render(); };
+    sc.append(b);
+  });
+  const cc = $('catChips'); cc.textContent='';
+  [{id:'all',name:'ทุกหมวด',emo:'🍽️'}, ...CATS].forEach(c => {
+    const b = el('button','chip'); b.type='button'; b.setAttribute('aria-pressed', state.cat===c.id);
+    b.append(c.emo+' '+c.name);
+    b.onclick = () => { state.cat = c.id; render(); };
+    cc.append(b);
+  });
+}
+
+function filtered(){
+  const q = state.q.trim().toLowerCase();
+  return FOODS.filter(f =>
+    (state.cat==='all' || f.cat===state.cat) &&
+    (state.lvl==='all' || (state.lvl==='mine' ? mine.has(f.id) : f.lvl===state.lvl)) &&
+    (!q || f.name.toLowerCase().includes(q) || f.why.includes(q)));
+}
+
+function render(){
+  renderChips();
+  const list = filtered();
+  // legend counts reflect category + search, not level filter
+  const q = state.q.trim().toLowerCase();
+  const base = FOODS.filter(f => (state.cat==='all'||f.cat===state.cat) && (!q || f.name.toLowerCase().includes(q) || f.why.includes(q)));
+  const lg = $('legend'); lg.textContent='';
+  [['g','ok','กินได้'],['y','limit','กินได้บ้าง'],['r','avoid','ควรเลี่ยง']].forEach(([l,k,label]) => {
+    const d = el('div',k); d.append(el('b',null,String(base.filter(f=>f.lvl===l).length)), label+(l==='y'?' (พอประมาณ)':''));
+    lg.append(d);
+  });
+  const cat = CATS.find(c=>c.id===state.cat);
+  $('listTitle').textContent = state.q ? 'ผลการค้นหา' : (cat ? cat.name : 'อาหารทั้งหมด');
+  $('count').textContent = list.length + ' รายการ';
+  const g = $('grid'); g.textContent='';
+  if (!list.length){
+    const e = el('div','empty', state.lvl==='mine' ? 'ยังไม่ได้จดอาหารที่กินแล้วมีอาการ แตะอาหารแล้วกด “กินแล้วมีอาการ” เพื่อเพิ่ม' : 'ไม่พบในรายการ ลองคำอื่น หรือถาม AI ด้านบน');
+    e.style.gridColumn='1/-1'; g.append(e);
+  }
+  list.forEach(f => {
+    const L = LVL[f.lvl];
+    const b = el('button','card'); b.type='button';
+    b.append(el('span','emo',f.emo), el('span','nm',f.name), pill(L.key,L.label));
+    if (mine.has(f.id)) b.append(el('span','mine','• ฉันกินแล้วมีอาการ'));
+    b.onclick = () => openSheet(f);
+    g.append(b);
+  });
+  // offer AI when search has no local match
+  const showAsk = state.q.trim().length >= 2 && !FOODS.some(f => f.name.toLowerCase().includes(q));
+  $('askAi').hidden = !showAsk;
+  if (showAsk) $('askAiText').textContent = 'ไม่มี “' + state.q.trim() + '” ในรายการ ให้ AI ประเมินให้ไหม?';
+}
+
+// ---------- detail sheet ----------
+const sheet = $('sheet');
+function openSheet(f){
+  const L = LVL[f.lvl]; const body = $('sheetBody'); body.textContent='';
+  const close = el('button','close','✕'); close.type='button'; close.setAttribute('aria-label','ปิด'); close.onclick=()=>sheet.close();
+  const cat = CATS.find(c=>c.id===f.cat);
+  const row = el('div','row'); row.append(pill(L.key,L.label), gauge(L.key));
+  const sub = el('p',null,cat.name); sub.style.cssText='color:var(--muted);font-size:.85rem';
+  body.append(close, el('div','emo',f.emo), el('h3',null,f.name), sub, row);
+  const w = el('div'); w.append(el('p','sub','เหตุผล'), el('p',null,f.why)); body.append(w);
+  if (f.tip){ const t = el('div','tipbox'); t.append(el('p','sub','คำแนะนำ'), el('p',null,f.tip)); body.append(t); }
+  const lab = el('label','toggle'); const cb = el('input'); cb.type='checkbox'; cb.id='mine-'+f.id; cb.checked = mine.has(f.id);
+  cb.onchange = () => { cb.checked ? mine.add(f.id) : mine.delete(f.id); saveMine(); render(); };
+  lab.append(cb, 'ฉันกินแล้วมีอาการ (จดไว้ในเครื่องนี้)');
+  body.append(lab);
+  sheet.showModal();
+}
+sheet.addEventListener('click', e => { if (e.target === sheet) sheet.close(); });
+
+// ---------- AI (photo + text) ----------
+// mode: 'claude' = opened inside Claude (viewer's own Claude), 'web' = own website with /api/analyze (Gemini), 'none'
+let sample = null, canImages = false, ctl = null, mode = 'none';
+const ready = (async () => {
+  try { sample = window.claude?.use ? await window.claude.use('sample') : null; } catch(e) { sample = null; }
+  if (sample){
+    const lim = await sample.limits().catch(()=>null);
+    canImages = !!lim?.images;
+    mode = 'claude';
+  } else if (/^https?:$/.test(location.protocol) && !window.claude) {
+    mode = 'web';
+  }
+  if (mode === 'web') $('scanNote').textContent = 'ใช้ AI วิเคราะห์ภาพ ผลอาจคลาดเคลื่อนได้ ควรใช้ประกอบการตัดสินใจ';
+  else if (mode === 'none' || !canImages) $('scanNote').textContent = 'การวิเคราะห์ภาพใช้ไม่ได้ในหน้านี้ ตอนนี้ยังค้นหาจากรายการด้านล่างได้ตามปกติ';
+})();
+function blobToB64(blob){
+  return new Promise((ok, bad) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = bad; r.readAsDataURL(blob); });
+}
+
+// shrink big phone photos before sending: faster upload, avoids getting stuck on 10+ MB files
+async function shrink(file){
+  try {
+    const bmp = await createImageBitmap(file);
+    const s = Math.min(1, 1024 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    bmp.close?.();
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.82));
+    return blob || file;
+  } catch(e) { return file; }
+}
+
+const NAMES = FOODS.map(f=>f.name).join(', ');
+function buildPrompt(subject){
+  return `คุณเป็นนักโภชนาการที่ช่วยผู้ป่วยโรคกรดไหลย้อน (GERD) ${subject}
+ประเมินว่าเหมาะกับคนเป็นกรดไหลย้อนแค่ไหน โดยดูจากปัจจัยกระตุ้นที่รู้กัน: ไขมันสูง ของทอด กะทิ ความเปรี้ยว/กรด (มะนาว มะเขือเทศ ส้ม น้ำส้มสายชู) ความเผ็ด (พริก) กระเทียม/หอมดิบ คาเฟอีน ช็อกโกแลต มินต์ แอลกอฮอล์ น้ำอัดลม และปริมาณที่มากเกินไป
+ตอบเป็นภาษาไทย เป็น JSON อย่างเดียวตามรูปแบบนี้:
+{"isFood":true,"dish":"ชื่ออาหาร","confidence":"high|medium|low","verdict":"ok|limit|avoid","summary":"สรุป 1-2 ประโยค","ingredients":[{"name":"วัตถุดิบ","status":"ok|limit|avoid","note":"สั้น ๆ"}],"tips":["วิธีกินหรือสั่งให้ปลอดภัยขึ้น"],"alternatives":["เมนูทดแทนที่ปลอดภัยกว่า"],"matches":["ชื่อจากรายการอ้างอิงที่ตรงหรือใกล้เคียง"]}
+ok = กินได้, limit = กินได้บ้างแต่ควรระวังปริมาณ, avoid = ควรเลี่ยง. ingredients 3-7 รายการ, tips 2-4 ข้อ, alternatives 0-3 ข้อ, matches 0-4 ชื่อ โดยเลือกเฉพาะชื่อจากรายการอ้างอิงนี้: ${NAMES}
+ถ้าไม่ใช่อาหารหรือเครื่องดื่ม ให้ตอบ {"isFood":false}`;
+}
+
+const resultEl = $('result');
+function showThinking(imgUrl, label){
+  resultEl.hidden = false; resultEl.textContent='';
+  const head = el('div','result-head');
+  if (imgUrl){ const im = el('img'); im.src = imgUrl; im.alt = 'รูปอาหารที่ถ่าย'; head.append(im); }
+  const meta = el('div','meta'); const t = el('div','thinking'); t.append(el('span','spinner'), label);
+  const hint = el('p',null, mode === 'claude' ? 'ถ้ามีหน้าต่างขออนุญาตใช้ Claude ให้กด “อนุญาต” ก่อน' : 'ปกติใช้เวลา 3–10 วินาที');
+  hint.style.cssText = 'margin:0;font-size:.85rem;color:var(--muted)';
+  meta.append(t, hint); head.append(meta); resultEl.append(head);
+  const stop = el('button','btn btn-soft','หยุด'); stop.type='button'; stop.onclick = () => { ctl?.abort(); resultEl.hidden = true; };
+  const acts = el('div','result-actions'); acts.append(stop); resultEl.append(acts);
+  resultEl.scrollIntoView({behavior:'smooth', block:'nearest'});
+  return {label: t.lastChild, hint};
+}
+// run a call with live progress so the screen never looks frozen
+// job = {kind:'photo', image} | {kind:'text', name}
+const SUBJECT = {
+  photo: () => 'ดูรูปอาหารที่แนบมา ระบุว่าเป็นเมนูอะไร (ส่วนใหญ่เป็นอาหารไทย) และวัตถุดิบที่มองเห็นหรือน่าจะมี',
+  text: n => 'ประเมินอาหารหรือเครื่องดื่มชื่อ: "' + n.slice(0,120) + '" ใส่วัตถุดิบหลักตามสูตรที่พบทั่วไป',
+};
+async function runAI(job, signal, ui){
+  const started = Date.now();
+  const timer = setInterval(() => {
+    const s = Math.round((Date.now() - started) / 1000);
+    if (s >= 25) ui.hint.textContent = 'ยังทำงานอยู่ (' + s + ' วินาที) กด “หยุด” แล้วลองใหม่ได้ถ้ารอนานเกินไป';
+  }, 1000);
+  try {
+    if (mode === 'claude'){
+      const prompt = buildPrompt(job.kind === 'photo' ? SUBJECT.photo() : SUBJECT.text(job.name));
+      return await sample.json(prompt, {images: job.image ? [job.image] : undefined, signal, modelTier:'quick',
+        onText: () => { ui.label.textContent = 'กำลังเขียนผลวิเคราะห์…'; }});
+    }
+    const body = {kind: job.kind, names: NAMES};
+    if (job.kind === 'photo'){ body.image = await blobToB64(job.image); body.mime = job.image.type || 'image/jpeg'; }
+    else body.name = job.name.slice(0,120);
+    let res;
+    try {
+      res = await fetch('/api/analyze', {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body), signal});
+    } catch(e){ throw {code: e?.name === 'AbortError' ? 'cancelled' : 'offline'}; }
+    const j = await res.json().catch(() => null);
+    if (!res.ok) throw {code: res.status === 429 ? 'rate_limited' : (j?.error === 'no_key' ? 'no_key' : (j?.error === 'too_large' ? 'image_rejected' : 'upstream_error'))};
+    if (!j || typeof j !== 'object') throw {code:'invalid_json'};
+    return j;
+  } finally { clearInterval(timer); }
+}
+const ERR = {
+  not_granted:'ไม่ได้อนุญาตให้ใช้ Claude จึงวิเคราะห์ไม่ได้ ลองค้นหาจากรายการแทน',
+  sampling_disabled:'หน้านี้ใช้ AI ไม่ได้ ลองค้นหาจากรายการแทน',
+  images_unavailable:'หน้านี้ส่งรูปให้ AI ไม่ได้ ลองพิมพ์ชื่ออาหารในช่องค้นหาแทน',
+  image_rejected:'รูปนี้ใช้ไม่ได้ ลองถ่ายใหม่เป็นไฟล์ JPG หรือ PNG',
+  rate_limited:'ใช้งานถี่เกินไป รอสักครู่แล้วลองใหม่',
+  refused:'AI ประเมินรูปนี้ไม่ได้ ลองถ่ายใหม่ให้เห็นอาหารชัดขึ้น',
+  invalid_json:'อ่านคำตอบไม่สำเร็จ กดลองใหม่อีกครั้ง',
+  session_expired:'กรุณาเข้าสู่ระบบ Claude ใหม่',
+  no_key:'เว็บนี้ยังไม่ได้ตั้งค่า AI จึงวิเคราะห์ไม่ได้ ลองค้นหาจากรายการแทน',
+  offline:'เชื่อมต่ออินเทอร์เน็ตไม่ได้ ตรวจสัญญาณแล้วลองใหม่',
+};
+function showError(e, imgUrl, retry){
+  if (e?.code === 'cancelled'){ resultEl.hidden = true; return; }
+  resultEl.hidden = false;
+  resultEl.textContent='';
+  const head = el('div','result-head');
+  if (imgUrl){ const im = el('img'); im.src = imgUrl; im.alt=''; head.append(im); }
+  const meta = el('div','meta'); meta.append(el('p','err', ERR[e?.code] || 'เกิดข้อผิดพลาดชั่วคราว ลองใหม่อีกครั้ง'));
+  head.append(meta); resultEl.append(head);
+  const acts = el('div','result-actions');
+  if (retry){ const r = el('button','btn btn-soft','ลองใหม่'); r.type='button'; r.onclick = retry; acts.append(r); }
+  const c = el('button','btn btn-soft','ปิด'); c.type='button'; c.onclick=()=>{resultEl.hidden=true}; acts.append(c);
+  resultEl.append(acts);
+}
+const V = {ok:'ok', limit:'limit', avoid:'avoid'};
+const VL = {ok:'กินได้', limit:'กินได้บ้าง', avoid:'ควรเลี่ยง'};
+function showResult(r, imgUrl){
+  resultEl.textContent='';
+  const head = el('div','result-head');
+  if (imgUrl){ const im = el('img'); im.src = imgUrl; im.alt='รูปอาหารที่ถ่าย'; head.append(im); }
+  const meta = el('div','meta');
+  if (r?.isFood === false){
+    meta.append(el('h3',null,'ดูไม่ออกว่าเป็นอาหาร'), el('p','summary','ลองถ่ายใหม่ให้เห็นจานอาหารชัด ๆ หรือพิมพ์ชื่อเมนูในช่องค้นหา'));
+    head.append(meta); resultEl.append(head);
+  } else {
+    const v = V[r?.verdict] || 'limit';
+    meta.append(el('p','sub','AI คิดว่าเป็น'+(r?.confidence==='low'?' (ไม่ค่อยแน่ใจ)':'')), el('h3',null,String(r?.dish||'อาหาร')));
+    const row = el('div'); row.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap';
+    row.append(pill(v,VL[v]), gauge(v)); meta.append(row);
+    head.append(meta); resultEl.append(head);
+    if (r?.summary) resultEl.append(el('p','summary',String(r.summary)));
+    if (Array.isArray(r?.ingredients) && r.ingredients.length){
+      const box = el('div'); box.append(el('p','sub','วัตถุดิบที่เห็น'));
+      const ul = el('ul','ing');
+      r.ingredients.slice(0,8).forEach(i => {
+        const k = V[i?.status] || 'limit';
+        const li = el('li'); li.append(el('span','dot '+k));
+        const d = el('div'); d.append(el('b',null,String(i?.name||'')+' · '+VL[k]));
+        if (i?.note) d.append(el('span',null,String(i.note)));
+        li.append(d); ul.append(li);
+      });
+      box.append(ul); resultEl.append(box);
+    }
+    if (Array.isArray(r?.tips) && r.tips.length){
+      const box = el('div'); box.append(el('p','sub','กินให้ปลอดภัยขึ้น'));
+      const ul = el('ul','tips'); r.tips.slice(0,5).forEach(t => ul.append(el('li',null,String(t)))); box.append(ul); resultEl.append(box);
+    }
+    if (Array.isArray(r?.alternatives) && r.alternatives.length){
+      const box = el('div'); box.append(el('p','sub','เมนูทดแทน'));
+      const ul = el('ul','tips'); r.alternatives.slice(0,4).forEach(t => ul.append(el('li',null,String(t)))); box.append(ul); resultEl.append(box);
+    }
+    const matched = (Array.isArray(r?.matches)?r.matches:[]).map(n => FOODS.find(f=>f.name===n)).filter(Boolean).slice(0,4);
+    if (matched.length){
+      const box = el('div'); box.append(el('p','sub','ดูในคู่มือ'));
+      const acts = el('div','result-actions');
+      matched.forEach(f => { const b = el('button','chip'); b.type='button'; b.append(el('span','dot '+LVL[f.lvl].key), f.emo+' '+f.name); b.onclick=()=>openSheet(f); acts.append(b); });
+      box.append(acts); resultEl.append(box);
+    }
+  }
+  const acts = el('div','result-actions');
+  const again = el('label','btn btn-soft'); again.htmlFor='camInput'; again.textContent='ถ่ายรูปใหม่';
+  const c = el('button','btn btn-soft','ปิด'); c.type='button'; c.onclick=()=>{resultEl.hidden=true};
+  acts.append(again, c); resultEl.append(acts);
+}
+
+let lastUrl = null;
+async function analyzePhoto(file){
+  if (!file) return;
+  if (lastUrl) URL.revokeObjectURL(lastUrl);
+  const url = lastUrl = URL.createObjectURL(file);
+  ctl?.abort(); const my = ctl = new AbortController();
+  const ui = showThinking(url, 'กำลังเตรียมรูป…');
+  await ready;
+  if (my.signal.aborted) return;
+  if (mode === 'none' || (mode === 'claude' && !canImages)){ showError({code:'images_unavailable'}, url); return; }
+  const img = await shrink(file);
+  if (my.signal.aborted) return;
+  ui.label.textContent = 'กำลังดูอาหารในรูป…';
+  try {
+    const r = await runAI({kind:'photo', image: img}, my.signal, ui);
+    if (ctl === my) showResult(r, url);
+  } catch(e){ if (ctl === my) showError(e, url, () => analyzePhoto(file)); }
+}
+async function analyzeText(name){
+  ctl?.abort(); const my = ctl = new AbortController();
+  const ui = showThinking(null, 'กำลังประเมิน “'+name+'”…');
+  await ready;
+  if (my.signal.aborted) return;
+  if (mode === 'none'){ showError({code:'sampling_disabled'}); return; }
+  try {
+    const r = await runAI({kind:'text', name}, my.signal, ui);
+    if (ctl === my) showResult(r, null);
+  } catch(e){ if (ctl === my) showError(e, null, () => analyzeText(name)); }
+}
+['camInput','galInput'].forEach(id => $(id).addEventListener('change', e => { const f = e.target.files?.[0]; e.target.value=''; analyzePhoto(f); }));
+$('askAiBtn').onclick = () => analyzeText(state.q.trim());
+
+// search
+let t;
+$('q').addEventListener('input', e => { clearTimeout(t); t = setTimeout(() => { state.q = e.target.value; render(); }, 120); });
+
+render();
+</script>
+
+</body>
+</html>
